@@ -55,7 +55,9 @@ main {
 .w { font-size: 1.75rem; line-height: 1.15; }
 .w.ka { color: var(--accent); }
 .arrow { font-size: 1.3rem; color: var(--faint); font-weight: 400; }
-.cap { font-size: .72rem; font-weight: 400; color: var(--muted); line-height: 1.4; }
+.cap { align-self: start; font-size: .72rem; font-weight: 400; color: var(--muted); line-height: 1.4; }
+/* text captions may carry a line break ("грузинский\nлатиницей") */
+.cap[data-t] { white-space: pre-line; }
 .lang { position: relative; }
 .lang-btn {
   display: inline-flex;
