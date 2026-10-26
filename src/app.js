@@ -1,0 +1,254 @@
+import { analyze, render, loadDictionary, toLatin } from './translit.js';
+import { translateText, translateTokens } from './translate.js';
+import { LANGS, DEFAULT_LANG, T, FLAGS, pathFor, termsHtml, installHtml, aboutHtml } from './i18n.js';
+
+const $ = (id) => document.getElementById(id);
+const latin = $('latin');
+const target = $('target');
+const ka = $('ka');
+const statusEl = $('status');
+const copyBtn = $('copy');
+const langBtn = $('lang-btn');
+const langMenu = $('lang-menu');
+
+const store = {
+  get(k, d) { try { return localStorage.getItem(k) ?? d; } catch { return d; } },
+  set(k, v) { try { localStorage.setItem(k, v); } catch {} },
+};
+
+// Site root: the folder with app.js (language pages live in subfolders).
+const ROOT = new URL('./', import.meta.url);
+
+let lang = document.documentElement.lang;
+let t = T[lang];
+
+// --- Fields: grow with content ---
+
+const fields = { latin, target, ka };
+function autosize(el) {
+  if (el === latin) return; // the source field has a fixed height
+  el.style.height = 'auto';
+  el.style.height = el.scrollHeight + 'px';
+}
+function setField(name, value) {
+  const el = fields[name];
+  if (el.value !== value) el.value = value;
+  autosize(el);
+  store.set(name, value);
+}
+
+function showStatus(text, isError = false) {
+  statusEl.hidden = !text;
+  statusEl.classList.toggle('error', isError);
+  statusEl.textContent = text ?? '';
+}
+
+// --- Translation flows from the field edited last ---
+
+let source = store.get('source', 'latin'); // 'latin' | 'ka' | 'target'
+let tokens = [];
+let controller = null;
+let debounce;
+let lastJob = null;
+
+function onEdit(name) {
+  source = name;
+  store.set('source', name);
+  store.set(name, fields[name].value);
+  autosize(fields[name]);
+  if (name === 'latin') {
+    tokens = analyze(latin.value);
+    setField('ka', render(tokens));
+  } else if (name === 'ka') {
+    setField('latin', toLatin(ka.value));
+  }
+  schedule();
+}
+
+function schedule(delay = 700) {
+  clearTimeout(debounce);
+  debounce = setTimeout(run, delay);
+}
+
+async function run() {
+  const text = fields[source].value.trim();
+  const job = `${source}|${lang}|${text}`;
+  if (job === lastJob) return;
+  lastJob = job;
+  controller?.abort();
+
+  copyBtn.hidden = !target.value.trim();
+  if (!text) {
+    for (const name of Object.keys(fields)) if (name !== source) setField(name, '');
+    copyBtn.hidden = true;
+    showStatus(null);
+    return;
+  }
+  if (!navigator.onLine) {
+    lastJob = null;
+    showStatus(t.offline, true);
+    return;
+  }
+
+  const ctrl = (controller = new AbortController());
+  const from = source;
+  const outputs = Object.values(fields).filter((el) => el !== fields[from]);
+  outputs.forEach((el) => el.classList.add('pending'));
+  showStatus(t.translating);
+  try {
+    if (from === 'latin') {
+      await translateTokens(tokens, lang, ctrl.signal, (r) => {
+        if (ctrl.signal.aborted) return;
+        setField('target', r.translation);
+        setField('ka', r.georgian);
+        copyBtn.hidden = false;
+      });
+    } else if (from === 'ka') {
+      const r = await translateText(ka.value.trim(), 'ka', lang, ctrl.signal);
+      if (!ctrl.signal.aborted) setField('target', r);
+    } else {
+      const r = await translateText(target.value.trim(), lang, 'ka', ctrl.signal);
+      if (!ctrl.signal.aborted) {
+        setField('ka', r);
+        setField('latin', toLatin(r));
+      }
+    }
+    if (!ctrl.signal.aborted) {
+      copyBtn.hidden = !target.value.trim();
+      showStatus(null);
+    }
+  } catch {
+    if (ctrl.signal.aborted) return;
+    lastJob = null;
+    showStatus(t.error, true);
+  } finally {
+    if (controller === ctrl) outputs.forEach((el) => el.classList.remove('pending'));
+  }
+}
+
+for (const [name, el] of Object.entries(fields)) el.addEventListener('input', () => onEdit(name));
+window.addEventListener('online', () => { lastJob = null; run(); });
+window.addEventListener('resize', () => { autosize(target); autosize(ka); });
+
+copyBtn.addEventListener('click', async () => {
+  try {
+    await navigator.clipboard.writeText(target.value);
+    copyBtn.textContent = '✓';
+    setTimeout(() => (copyBtn.textContent = '⧉'), 1200);
+  } catch {}
+});
+
+// --- Target language = UI language ---
+
+function applyLang(next) {
+  lang = next;
+  t = T[lang];
+  document.documentElement.lang = lang;
+  document.title = t.title;
+  document.querySelector('meta[name="description"]')?.setAttribute('content', t.description);
+  document.querySelectorAll('[data-t]').forEach((el) => (el.textContent = t[el.dataset.t]));
+  document.querySelectorAll('[data-ph]').forEach((el) => (el.placeholder = t[el.dataset.ph]));
+  document.querySelectorAll('[data-aria]').forEach((el) => el.setAttribute('aria-label', t[el.dataset.aria]));
+  document.querySelectorAll('[data-alt]').forEach((el) => (el.alt = t[el.dataset.alt]));
+  $('copy').title = t.copy;
+  document.querySelector('[data-flag]').innerHTML = FLAGS[lang];
+  document.querySelector('[data-html="terms"]').innerHTML = termsHtml(t);
+  document.querySelector('[data-html="install"]').innerHTML = installHtml(t);
+  document.querySelector('[data-html="about"]').innerHTML = aboutHtml(t);
+  target.lang = lang;
+  langMenu.querySelectorAll('a').forEach((a) =>
+    a.dataset.lang === lang ? a.setAttribute('aria-current', 'true') : a.removeAttribute('aria-current'));
+  store.set('lang', lang);
+}
+
+function switchLang(next) {
+  if (next === lang) return;
+  history.replaceState(null, '', new URL(pathFor(next), ROOT));
+  applyLang(next);
+  // re-translate from the source text: Latin or Georgian
+  if (source === 'target') { source = 'ka'; store.set('source', 'ka'); }
+  setField('target', '');
+  lastJob = null;
+  schedule(0);
+}
+
+function toggleMenu(open) {
+  langMenu.hidden = !open;
+  langBtn.setAttribute('aria-expanded', String(open));
+}
+langBtn.addEventListener('click', () => toggleMenu(langMenu.hidden));
+langMenu.addEventListener('click', (e) => {
+  const a = e.target.closest('a[data-lang]');
+  if (!a) return;
+  e.preventDefault();
+  toggleMenu(false);
+  switchLang(a.dataset.lang);
+  langBtn.focus();
+});
+document.addEventListener('click', (e) => {
+  if (!langMenu.hidden && !e.target.closest('.lang')) toggleMenu(false);
+});
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && !langMenu.hidden) { toggleMenu(false); langBtn.focus(); }
+});
+
+// --- Dialogs: about, terms, install ---
+
+for (const id of ['about', 'terms', 'install']) {
+  const dlg = $(id);
+  $(`${id}-open`).addEventListener('click', () => dlg.showModal());
+  dlg.addEventListener('click', (e) => { if (e.target === dlg) dlg.close(); });
+}
+
+// If the browser can install the PWA itself, show an "Install" button.
+let installPrompt = null;
+const installNow = $('install-now');
+window.addEventListener('beforeinstallprompt', (e) => {
+  e.preventDefault();
+  installPrompt = e;
+  installNow.hidden = false;
+});
+installNow.addEventListener('click', async () => {
+  if (!installPrompt) return;
+  installPrompt.prompt();
+  await installPrompt.userChoice.catch(() => {});
+  installPrompt = null;
+  installNow.hidden = true;
+  $('install').close();
+});
+window.addEventListener('appinstalled', () => { installNow.hidden = true; });
+
+// --- Startup ---
+
+const saved = store.get('lang', null);
+const onRoot = new URL(location.href).pathname === ROOT.pathname;
+if (onRoot && saved && saved !== DEFAULT_LANG && LANGS.includes(saved)) {
+  history.replaceState(null, '', new URL(pathFor(saved), ROOT));
+  applyLang(saved);
+} else {
+  store.set('lang', lang);
+}
+
+latin.value = store.get('latin', '');
+ka.value = store.get('ka', '');
+target.value = store.get('target', '');
+tokens = analyze(latin.value);
+autosize(target);
+autosize(ka);
+copyBtn.hidden = !target.value.trim();
+if (source === 'latin' && latin.value) setField('ka', render(tokens));
+schedule(0);
+
+loadDictionary(new URL('dict.bin', ROOT))
+  .then(() => {
+    if (source !== 'latin') return;
+    tokens = analyze(latin.value);
+    setField('ka', render(tokens));
+    lastJob = null;
+    schedule(0);
+  })
+  .catch(() => {});
+
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register(new URL('sw.js', ROOT)).catch(() => {});
+}

@@ -1,0 +1,11 @@
+{
+  "name": "gesms",
+  "private": true,
+  "description": "PWA that turns Georgian typed in Latin letters into Georgian script and translates it",
+  "type": "module",
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "build:dict": "node scripts/build-dict.mjs",
+    "start": "node scripts/build.mjs && node scripts/serve.mjs 8080"
+  }
+}

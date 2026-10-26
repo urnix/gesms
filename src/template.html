@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="{{lang}}">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{title}}</title>
+  <meta name="description" content="{{description}}">
+  <meta name="keywords" content="{{keywords}}, {{kaKeywords}}">
+  <link rel="canonical" href="{{url}}">
+{{{alternates}}}
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="GeSMS">
+  <meta property="og:title" content="{{title}}">
+  <meta property="og:description" content="{{description}}">
+  <meta property="og:url" content="{{url}}">
+  <meta property="og:image" content="{{site}}icons/og.png">
+  <meta property="og:locale" content="{{locale}}">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="theme-color" content="#E4002B">
+  <link rel="manifest" href="{{base}}manifest.webmanifest">
+  <link rel="icon" href="{{base}}icons/icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="{{base}}icons/icon-180.png">
+  <link rel="stylesheet" href="{{base}}styles.css">
+  <script type="application/ld+json">{{{jsonld}}}</script>
+</head>
+<body>
+  <main>
+    <header class="hero">
+      <img class="cat" src="{{base}}icons/cat.svg" alt="{{catAlt}}" data-alt="catAlt" width="64" height="64">
+      <div>
+        <h1 class="chain">
+          <span class="w">gesms</span>
+          <span class="arrow" aria-hidden="true">→</span>
+          <span class="w ka" lang="ka">გესმს</span>
+          <span class="arrow" aria-hidden="true">→</span>
+          <span class="w" data-t="word">{{word}}</span>
+          <span class="cap" data-t="capLatin">{{capLatin}}</span>
+          <span></span>
+          <span class="cap" data-t="capKa">{{capKa}}</span>
+          <span></span>
+          <span class="cap lang">
+            <button id="lang-btn" class="lang-btn" type="button" aria-haspopup="true" aria-expanded="false" aria-controls="lang-menu" data-aria="chooseLang" aria-label="{{chooseLang}}">
+              <span class="flag" data-flag>{{{flag}}}</span><span data-t="name">{{name}}</span><span class="caret" aria-hidden="true">▾</span>
+            </button>
+            <span id="lang-menu" class="lang-menu" hidden>
+{{{langMenu}}}
+            </span>
+          </span>
+        </h1>
+      </div>
+    </header>
+    <p class="tagline" data-t="tagline">{{tagline}}</p>
+
+    <textarea id="latin" class="f-latin" spellcheck="false" autocomplete="off" autocapitalize="off"
+      data-ph="phLatin" placeholder="{{phLatin}}" data-aria="ariaLatin" aria-label="{{ariaLatin}}"></textarea>
+
+    <section class="result">
+      <div class="target-row">
+        <textarea id="target" class="f-target" rows="1" lang="{{lang}}"
+          data-ph="phTarget" placeholder="{{phTarget}}" data-aria="ariaTarget" aria-label="{{ariaTarget}}"></textarea>
+        <button id="copy" class="copy" type="button" data-aria="copy" aria-label="{{copy}}" title="{{copy}}" hidden>⧉</button>
+      </div>
+      <p id="status" class="status" role="status" hidden></p>
+      <textarea id="ka" class="f-ka" rows="1" lang="ka" spellcheck="false"
+        data-ph="phKa" placeholder="{{phKa}}" data-aria="ariaKa" aria-label="{{ariaKa}}"></textarea>
+    </section>
+
+    <footer>
+      <button id="about-open" class="link" type="button" data-t="aboutTitle">{{aboutTitle}}</button>
+      <span aria-hidden="true">·</span>
+      <button id="install-open" class="link" type="button" data-t="installLink">{{installLink}}</button>
+      <span aria-hidden="true">·</span>
+      <button id="terms-open" class="link" type="button" data-t="termsLink">{{termsLink}}</button>
+    </footer>
+  </main>
+
+  <!-- The description stays in the page HTML, so search engines index it even while the dialog is closed -->
+  <dialog id="about" aria-labelledby="about-title">
+    <form method="dialog">
+      <h2 id="about-title" tabindex="-1" autofocus data-t="aboutTitle">{{aboutTitle}}</h2>
+      <div class="prose" data-html="about">{{{about}}}</div>
+      <div class="prose" lang="ka">
+        <h3>{{kaTitle}}</h3>
+        <p>{{kaText}}</p>
+      </div>
+      <div class="actions">
+        <button class="primary" type="submit" data-t="ok">{{ok}}</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="install" aria-labelledby="install-title">
+    <form method="dialog">
+      <h2 id="install-title" tabindex="-1" autofocus data-t="installTitle">{{installTitle}}</h2>
+      <div data-html="install">{{{install}}}</div>
+      <div class="actions">
+        <button id="install-now" class="primary" type="button" data-t="installNow" hidden>{{installNow}}</button>
+        <button class="primary" type="submit" data-t="ok">{{ok}}</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="terms" aria-labelledby="terms-title">
+    <form method="dialog">
+      <h2 id="terms-title" tabindex="-1" autofocus data-t="termsLink">{{termsLink}}</h2>
+      <div data-html="terms">{{{terms}}}</div>
+      <div class="actions">
+        <button class="primary" type="submit" data-t="ok">{{ok}}</button>
+      </div>
+    </form>
+  </dialog>
+
+  <script type="module" src="{{base}}app.js"></script>
+</body>
+</html>
