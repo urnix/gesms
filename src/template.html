@@ -100,6 +100,18 @@
     </form>
   </dialog>
 
+  <dialog id="offer" class="offer" aria-labelledby="offer-title">
+    <form method="dialog">
+      <img src="{{base}}icons/cat.svg" alt="" width="72" height="72">
+      <h2 id="offer-title" data-t="offerTitle">{{offerTitle}}</h2>
+      <p data-t="offerText">{{offerText}}</p>
+      <div class="actions">
+        <button class="secondary" type="submit" value="no" data-t="offerNo">{{offerNo}}</button>
+        <button id="offer-yes" class="primary" type="button" data-t="offerYes">{{offerYes}}</button>
+      </div>
+    </form>
+  </dialog>
+
   <dialog id="terms" aria-labelledby="terms-title">
     <form method="dialog">
       <h2 id="terms-title" tabindex="-1" autofocus data-t="termsLink">{{termsLink}}</h2>

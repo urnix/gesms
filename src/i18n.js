@@ -16,6 +16,8 @@ export const FLAGS = {
 
 export const T = {
   ru: {
+    offerTitle: 'Пусть переводчик будет под рукой', offerYes: 'Показать, как', offerNo: 'Не сейчас',
+    offerText: 'Добавьте GeSMS на главный экран телефона: когда придёт СМС латиницей, перевод будет в одно касание. Бесплатно, без регистрации, займёт пару секунд.',
     installLink: 'Как установить приложение', installTitle: 'Как установить приложение', installNow: 'Установить',
     install: [
       ['Android', 'Откройте сайт в Chrome, нажмите меню ⋮ и выберите «Установить приложение» (или «Добавить на главный экран»), затем «Установить».'],
@@ -55,6 +57,8 @@ export const T = {
   },
 
   en: {
+    offerTitle: 'Keep the translator at hand', offerYes: 'Show me how', offerNo: 'Not now',
+    offerText: 'Add GeSMS to your phone’s home screen: next time an SMS in Latin letters arrives, the translation is one tap away. Free, no sign-up, takes a few seconds.',
     installLink: 'How to install the app', installTitle: 'How to install the app', installNow: 'Install',
     install: [
       ['Android', 'Open the site in Chrome, tap the ⋮ menu and choose “Install app” (or “Add to Home screen”), then “Install”.'],
@@ -94,6 +98,8 @@ export const T = {
   },
 
   tr: {
+    offerTitle: 'Çevirmen hep elinizin altında olsun', offerYes: 'Nasıl yapılır', offerNo: 'Şimdi değil',
+    offerText: 'GeSMS’i telefonunuzun ana ekranına ekleyin: Latin harfli bir SMS geldiğinde çeviri tek dokunuşla açılır. Ücretsiz, kayıt gerektirmez, birkaç saniye sürer.',
     installLink: 'Uygulama nasıl yüklenir', installTitle: 'Uygulama nasıl yüklenir', installNow: 'Yükle',
     install: [
       ['Android', 'Siteyi Chrome’da açın, ⋮ menüsüne dokunun ve “Uygulamayı yükle” (veya “Ana ekrana ekle”) seçeneğini, ardından “Yükle”yi seçin.'],
@@ -133,6 +139,8 @@ export const T = {
   },
 
   es: {
+    offerTitle: 'Tenga el traductor a mano', offerYes: 'Mostrar cómo', offerNo: 'Ahora no',
+    offerText: 'Añada GeSMS a la pantalla de inicio de su teléfono: la próxima vez que llegue un SMS en letras latinas, la traducción estará a un toque. Gratis, sin registro, lleva unos segundos.',
     installLink: 'Cómo instalar la aplicación', installTitle: 'Cómo instalar la aplicación', installNow: 'Instalar',
     install: [
       ['Android', 'Abra el sitio en Chrome, toque el menú ⋮ y elija «Instalar aplicación» (o «Añadir a pantalla de inicio») y luego «Instalar».'],
@@ -172,6 +180,8 @@ export const T = {
   },
 
   fr: {
+    offerTitle: 'Gardez le traducteur à portée de main', offerYes: 'Montrer comment', offerNo: 'Plus tard',
+    offerText: 'Ajoutez GeSMS à l’écran d’accueil de votre téléphone : la prochaine fois qu’un SMS en lettres latines arrive, la traduction sera à un geste. Gratuit, sans inscription, quelques secondes suffisent.',
     installLink: 'Comment installer l’application', installTitle: 'Comment installer l’application', installNow: 'Installer',
     install: [
       ['Android', 'Ouvrez le site dans Chrome, touchez le menu ⋮ et choisissez « Installer l’application » (ou « Ajouter à l’écran d’accueil »), puis « Installer ».'],

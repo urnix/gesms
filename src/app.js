@@ -25,10 +25,13 @@ let t = T[lang];
 // --- Fields: grow with content ---
 
 const fields = { latin, target, ka };
+// Browsers with `field-sizing: content` grow the fields in CSS; elsewhere we size them here.
+const cssSizing = CSS.supports?.('field-sizing', 'content');
 function autosize(el) {
-  if (el === latin) return; // the source field has a fixed height
+  if (el === latin || cssSizing) return; // the source field has a fixed height
   el.style.height = 'auto';
-  el.style.height = el.scrollHeight + 'px';
+  // scrollHeight excludes borders, while the box is border-box
+  el.style.height = el.scrollHeight + (el.offsetHeight - el.clientHeight) + 'px';
 }
 function setField(name, value) {
   const el = fields[name];
@@ -116,6 +119,7 @@ async function run() {
     if (!ctrl.signal.aborted) {
       copyBtn.hidden = !target.value.trim();
       showStatus(null);
+      if (target.value.trim()) scheduleInstallOffer();
     }
   } catch {
     if (ctrl.signal.aborted) return;
@@ -129,6 +133,7 @@ async function run() {
 for (const [name, el] of Object.entries(fields)) el.addEventListener('input', () => onEdit(name));
 window.addEventListener('online', () => { lastJob = null; run(); });
 window.addEventListener('resize', () => { autosize(target); autosize(ka); });
+document.fonts?.ready.then(() => { autosize(target); autosize(ka); });
 
 copyBtn.addEventListener('click', async () => {
   try {
@@ -156,9 +161,13 @@ function applyLang(next) {
   document.querySelector('[data-html="install"]').innerHTML = installHtml(t);
   document.querySelector('[data-html="about"]').innerHTML = aboutHtml(t);
   target.lang = lang;
+  markCurrentLang();
+  store.set('lang', lang);
+}
+
+function markCurrentLang() {
   langMenu.querySelectorAll('a').forEach((a) =>
     a.dataset.lang === lang ? a.setAttribute('aria-current', 'true') : a.removeAttribute('aria-current'));
-  store.set('lang', lang);
 }
 
 function switchLang(next) {
@@ -183,10 +192,9 @@ langMenu.addEventListener('click', (e) => {
   e.preventDefault();
   toggleMenu(false);
   switchLang(a.dataset.lang);
-  langBtn.focus();
 });
 document.addEventListener('click', (e) => {
-  if (!langMenu.hidden && !e.target.closest('.lang')) toggleMenu(false);
+  if (!langMenu.hidden && !e.target.closest('#lang-menu, #lang-btn')) toggleMenu(false);
 });
 document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape' && !langMenu.hidden) { toggleMenu(false); langBtn.focus(); }
@@ -216,7 +224,49 @@ installNow.addEventListener('click', async () => {
   installNow.hidden = true;
   $('install').close();
 });
-window.addEventListener('appinstalled', () => { installNow.hidden = true; });
+window.addEventListener('appinstalled', () => { installNow.hidden = true; store.set('installed', '1'); });
+
+// A gentle offer to add the app to the phone, 30 s after the first successful translation.
+// Shown once per page load, only on touch devices, never inside the installed app,
+// and not again for two weeks after the person says "not now".
+const OFFER_DELAY = 30_000;
+const OFFER_SNOOZE = 14 * 24 * 3600_000;
+const offer = $('offer');
+let offerTimer = null;
+
+function offerAllowed() {
+  const installed = matchMedia('(display-mode: standalone)').matches || navigator.standalone
+    || store.get('installed', '') === '1';
+  const snoozed = Date.now() - Number(store.get('offerSnoozedAt', '0')) < OFFER_SNOOZE;
+  return !installed && !snoozed && matchMedia('(pointer: coarse)').matches;
+}
+
+function scheduleInstallOffer() {
+  if (offerTimer !== null || !offerAllowed()) return;
+  offerTimer = setTimeout(function show() {
+    // wait until the person is not in another dialog
+    if (document.querySelector('dialog[open]')) { offerTimer = setTimeout(show, 3000); return; }
+    $('offer-yes').textContent = installPrompt ? t.installNow : t.offerYes;
+    offer.returnValue = '';
+    offer.showModal();
+  }, OFFER_DELAY);
+}
+
+$('offer-yes').addEventListener('click', async () => {
+  offer.close('yes');
+  if (installPrompt) {
+    installPrompt.prompt();
+    await installPrompt.userChoice.catch(() => {});
+    installPrompt = null;
+    installNow.hidden = true;
+  } else {
+    $('install').showModal();
+  }
+});
+offer.addEventListener('close', () => {
+  if (offer.returnValue !== 'yes') store.set('offerSnoozedAt', String(Date.now()));
+});
+offer.addEventListener('click', (e) => { if (e.target === offer) offer.close(); });
 
 // --- Startup ---
 
@@ -235,6 +285,7 @@ target.value = store.get('target', '');
 tokens = analyze(latin.value);
 autosize(target);
 autosize(ka);
+markCurrentLang();
 copyBtn.hidden = !target.value.trim();
 if (source === 'latin' && latin.value) setField('ka', render(tokens));
 schedule(0);
