@@ -1,4 +1,4 @@
-# GeSMS: gesms → გესმს → гесмс
+# GeSMS: kata → კატა → кот
 
 **https://gesms.artme.dev**
 

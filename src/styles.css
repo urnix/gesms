@@ -37,7 +37,7 @@ main {
 }
 .ka, [lang="ka"] { font-family: "Noto Sans Georgian", system-ui, "Sylfaen", sans-serif; }
 
-/* --- Header: kitten + gesms → გესმს → гесмс --- */
+/* --- Header: kitten + kata → კატა → кот --- */
 .hero { --cat: 64px; display: flex; align-items: center; gap: 14px; }
 .cat { width: var(--cat); height: var(--cat); flex: none; }
 /* words on the first grid row, captions on the second, aligned by column */
