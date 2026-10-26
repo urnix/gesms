@@ -51,8 +51,11 @@
     </header>
     <p class="tagline" data-t="tagline">{{tagline}}</p>
 
-    <textarea id="latin" class="f-latin" spellcheck="false" autocomplete="off" autocapitalize="off"
-      data-ph="phLatin" placeholder="{{phLatin}}" data-aria="ariaLatin" aria-label="{{ariaLatin}}"></textarea>
+    <div class="field">
+      <textarea id="latin" class="f-latin" spellcheck="false" autocomplete="off" autocapitalize="off"
+        data-ph="phLatin" placeholder="{{phLatin}}" data-aria="ariaLatin" aria-label="{{ariaLatin}}"></textarea>
+      <button id="clear" class="clear" type="button" data-aria="clear" aria-label="{{clear}}" title="{{clear}}" hidden>×</button>
+    </div>
 
     <section class="result">
       <div class="target-row">
@@ -71,6 +74,8 @@
       <button id="install-open" class="link" type="button" data-t="installLink">{{installLink}}</button>
       <span aria-hidden="true">·</span>
       <button id="terms-open" class="link" type="button" data-t="termsLink">{{termsLink}}</button>
+      <span aria-hidden="true">·</span>
+      <a class="link" href="https://github.com/urnix/gesms" target="_blank" rel="noopener" data-t="sourceCode">{{sourceCode}}</a>
     </footer>
   </main>
 

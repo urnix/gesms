@@ -8,6 +8,7 @@ const target = $('target');
 const ka = $('ka');
 const statusEl = $('status');
 const copyBtn = $('copy');
+const clearBtn = $('clear');
 const langBtn = $('lang-btn');
 const langMenu = $('lang-menu');
 
@@ -45,6 +46,7 @@ function setField(name, value) {
   if (el.value !== value) el.value = value;
   autosize(el);
   store.set(name, value);
+  if (name === 'latin') clearBtn.hidden = !value;
 }
 
 function showStatus(text, isError = false) {
@@ -67,6 +69,7 @@ function onEdit(name) {
   store.set(name, fields[name].value);
   autosize(fields[name]);
   if (name === 'latin') {
+    clearBtn.hidden = !latin.value;
     tokens = analyze(latin.value);
     setField('ka', render(tokens));
   } else if (name === 'ka') {
@@ -147,6 +150,14 @@ window.addEventListener('online', () => { lastJob = null; run(); });
 window.addEventListener('resize', () => { autosize(target); autosize(ka); });
 document.fonts?.ready.then(() => { autosize(target); autosize(ka); });
 
+// The × in the source field clears it, and with it the Georgian text and the translation.
+clearBtn.addEventListener('click', () => {
+  latin.value = '';
+  onEdit('latin');
+  latin.focus();
+  track('clear');
+});
+
 copyBtn.addEventListener('click', async () => {
   try {
     await navigator.clipboard.writeText(target.value);
@@ -169,6 +180,7 @@ function applyLang(next) {
   document.querySelectorAll('[data-aria]').forEach((el) => el.setAttribute('aria-label', t[el.dataset.aria]));
   document.querySelectorAll('[data-alt]').forEach((el) => (el.alt = t[el.dataset.alt]));
   $('copy').title = t.copy;
+  clearBtn.title = t.clear;
   document.querySelector('[data-flag]').innerHTML = FLAGS[lang];
   document.querySelector('[data-html="terms"]').innerHTML = termsHtml(t);
   document.querySelector('[data-html="install"]').innerHTML = installHtml(t);
@@ -313,6 +325,7 @@ autosize(target);
 autosize(ka);
 markCurrentLang();
 copyBtn.hidden = !target.value.trim();
+clearBtn.hidden = !latin.value;
 if (source === 'latin' && latin.value) setField('ka', render(tokens));
 schedule(0);
 
