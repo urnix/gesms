@@ -1,7 +1,7 @@
 // Service worker: caches the app shell so it opens offline
 // (transliteration works without a network; translation needs one).
 
-const CACHE = 'gesms-v4';
+const CACHE = 'gesms-v5';
 const SHELL = [
   './',
   './en/',
@@ -38,6 +38,8 @@ self.addEventListener('activate', (e) => {
 self.addEventListener('fetch', (e) => {
   const url = new URL(e.request.url);
   if (e.request.method !== 'GET' || url.origin !== location.origin) return;
+  // the stats tracker is proxied to Umami; never cache it
+  if (url.pathname.startsWith('/umami/')) return;
   e.respondWith(
     fetch(e.request)
       .then((res) => {

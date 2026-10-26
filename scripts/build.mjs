@@ -5,13 +5,16 @@
 //
 //   node scripts/build.mjs
 
-import { readFile, writeFile, mkdir, cp, rm } from 'node:fs/promises';
+import { readFile, writeFile, mkdir, cp, rm, readdir } from 'node:fs/promises';
+import { createHash } from 'node:crypto';
 import { dirname, join, basename } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const SRC = join(dirname(fileURLToPath(import.meta.url)), '..', 'src');
 const DIST = join(SRC, '..', 'dist');
 const SITE = 'https://gesms.artme.dev/';
+// Umami website for anonymous stats (dashboard: https://stats.artme.dev)
+const UMAMI_WEBSITE_ID = 'f5e56872-87a1-4dca-92ba-2fc6b2a4d6a5';
 const LOCALES = { ru: 'ru_RU', en: 'en_US', tr: 'tr_TR', es: 'es_ES', fr: 'fr_FR' };
 
 const { LANGS, T, FLAGS, KA_ABOUT, pathFor, termsHtml, installHtml, aboutHtml } =
@@ -19,6 +22,22 @@ const { LANGS, T, FLAGS, KA_ABOUT, pathFor, termsHtml, installHtml, aboutHtml } 
 
 await rm(DIST, { recursive: true, force: true });
 await cp(SRC, DIST, { recursive: true, filter: (f) => basename(f) !== 'template.html' });
+
+// Cache busting: Cloudflare rewrites Cache-Control on JS/CSS to a 4-hour browser TTL, so a deploy
+// could pair fresh HTML with stale scripts. Every JS/CSS/data URL gets ?v=<hash of all sources>;
+// all imports of a module share the same URL, so each module still loads once.
+const hash = createHash('sha256');
+for (const f of (await readdir(SRC, { recursive: true })).sort()) {
+  try { hash.update(f).update(await readFile(join(SRC, f))); } catch { /* directory */ }
+}
+const version = hash.digest('hex').slice(0, 10);
+for (const f of await readdir(DIST)) {
+  if (!f.endsWith('.js') || f === 'sw.js') continue;
+  const code = await readFile(join(DIST, f), 'utf8');
+  await writeFile(join(DIST, f), code
+    .replace(/(from '\.\/[\w-]+\.js)'/g, `$1?v=${version}'`)
+    .replace(/new URL\('dict\.bin'/g, `new URL('dict.bin?v=${version}'`));
+}
 
 const template = await readFile(join(SRC, 'template.html'), 'utf8');
 const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
@@ -55,6 +74,7 @@ for (const lang of LANGS) {
   const vars = {
     ...t, lang, base, url, site: SITE, locale: LOCALES[lang],
     kaTitle: KA_ABOUT.title, kaText: KA_ABOUT.text, kaKeywords: KA_ABOUT.keywords,
+    umamiId: UMAMI_WEBSITE_ID, umamiDomain: new URL(SITE).host, version,
   };
   const html = template
     .replace(/\{\{\{(\w+)\}\}\}/g, (_, k) => raw[k] ?? '')

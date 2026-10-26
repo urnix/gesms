@@ -1,5 +1,5 @@
 import { analyze, render, loadDictionary, toLatin } from './translit.js';
-import { translateText, translateTokens } from './translate.js';
+import { translateText, translateTokens, lastProvider } from './translate.js';
 import { LANGS, DEFAULT_LANG, T, FLAGS, pathFor, termsHtml, installHtml, aboutHtml } from './i18n.js';
 
 const $ = (id) => document.getElementById(id);
@@ -15,6 +15,13 @@ const store = {
   get(k, d) { try { return localStorage.getItem(k) ?? d; } catch { return d; } },
   set(k, v) { try { localStorage.setItem(k, v); } catch {} },
 };
+
+// Anonymous usage stats via Umami (loaded by the page on the production domain only).
+// Never sends any text: only event names and coarse properties.
+function track(name, data) {
+  try { window.umami?.track(name, data); } catch {}
+}
+const sizeBucket = (n) => (n <= 20 ? '1-20' : n <= 100 ? '21-100' : n <= 500 ? '101-500' : '500+');
 
 // Site root: the folder with app.js (language pages live in subfolders).
 const ROOT = new URL('./', import.meta.url);
@@ -98,14 +105,15 @@ async function run() {
   const outputs = Object.values(fields).filter((el) => el !== fields[from]);
   outputs.forEach((el) => el.classList.add('pending'));
   showStatus(t.translating);
+  let retries = 0;
   try {
     if (from === 'latin') {
-      await translateTokens(tokens, lang, ctrl.signal, (r) => {
+      ({ retries } = await translateTokens(tokens, lang, ctrl.signal, (r) => {
         if (ctrl.signal.aborted) return;
         setField('target', r.translation);
         setField('ka', r.georgian);
         copyBtn.hidden = false;
-      });
+      }));
     } else if (from === 'ka') {
       const r = await translateText(ka.value.trim(), 'ka', lang, ctrl.signal);
       if (!ctrl.signal.aborted) setField('target', r);
@@ -120,11 +128,15 @@ async function run() {
       copyBtn.hidden = !target.value.trim();
       showStatus(null);
       if (target.value.trim()) scheduleInstallOffer();
+      if (lastProvider !== 'cache') {
+        track('translate', { from, lang, provider: lastProvider, retries, size: sizeBucket(text.length) });
+      }
     }
   } catch {
     if (ctrl.signal.aborted) return;
     lastJob = null;
     showStatus(t.error, true);
+    track('translate-error', { from, lang });
   } finally {
     if (controller === ctrl) outputs.forEach((el) => el.classList.remove('pending'));
   }
@@ -138,6 +150,7 @@ document.fonts?.ready.then(() => { autosize(target); autosize(ka); });
 copyBtn.addEventListener('click', async () => {
   try {
     await navigator.clipboard.writeText(target.value);
+    track('copy', { lang });
     copyBtn.textContent = '✓';
     setTimeout(() => (copyBtn.textContent = '⧉'), 1200);
   } catch {}
@@ -172,6 +185,7 @@ function markCurrentLang() {
 
 function switchLang(next) {
   if (next === lang) return;
+  track('lang-switch', { from: lang, to: next });
   history.replaceState(null, '', new URL(pathFor(next), ROOT));
   applyLang(next);
   // re-translate from the source text: Latin or Georgian
@@ -204,7 +218,7 @@ document.addEventListener('keydown', (e) => {
 
 for (const id of ['about', 'terms', 'install']) {
   const dlg = $(id);
-  $(`${id}-open`).addEventListener('click', () => dlg.showModal());
+  $(`${id}-open`).addEventListener('click', () => { dlg.showModal(); track('open-dialog', { name: id }); });
   dlg.addEventListener('click', (e) => { if (e.target === dlg) dlg.close(); });
 }
 
@@ -219,12 +233,21 @@ window.addEventListener('beforeinstallprompt', (e) => {
 installNow.addEventListener('click', async () => {
   if (!installPrompt) return;
   installPrompt.prompt();
-  await installPrompt.userChoice.catch(() => {});
+  const choice = await installPrompt.userChoice.catch(() => null);
+  track('install-prompt', { outcome: choice?.outcome ?? 'unknown', via: 'guide' });
   installPrompt = null;
   installNow.hidden = true;
   $('install').close();
 });
-window.addEventListener('appinstalled', () => { installNow.hidden = true; store.set('installed', '1'); });
+window.addEventListener('appinstalled', () => {
+  installNow.hidden = true;
+  store.set('installed', '1');
+  track('installed');
+});
+// Launches from the home-screen icon, to see whether installed users come back.
+if (matchMedia('(display-mode: standalone)').matches || navigator.standalone) {
+  addEventListener('load', () => setTimeout(() => track('launch-installed'), 1000));
+}
 
 // A gentle offer to add the app to the phone, 30 s after the first successful translation.
 // Shown once per page load, only on touch devices, never inside the installed app,
@@ -249,6 +272,7 @@ function scheduleInstallOffer() {
     $('offer-yes').textContent = installPrompt ? t.installNow : t.offerYes;
     offer.returnValue = '';
     offer.showModal();
+    track('install-offer', { action: 'shown' });
   }, OFFER_DELAY);
 }
 
@@ -256,7 +280,8 @@ $('offer-yes').addEventListener('click', async () => {
   offer.close('yes');
   if (installPrompt) {
     installPrompt.prompt();
-    await installPrompt.userChoice.catch(() => {});
+    const choice = await installPrompt.userChoice.catch(() => null);
+    track('install-prompt', { outcome: choice?.outcome ?? 'unknown', via: 'offer' });
     installPrompt = null;
     installNow.hidden = true;
   } else {
@@ -264,6 +289,7 @@ $('offer-yes').addEventListener('click', async () => {
   }
 });
 offer.addEventListener('close', () => {
+  track('install-offer', { action: offer.returnValue === 'yes' ? 'yes' : 'no' });
   if (offer.returnValue !== 'yes') store.set('offerSnoozedAt', String(Date.now()));
 });
 offer.addEventListener('click', (e) => { if (e.target === offer) offer.close(); });

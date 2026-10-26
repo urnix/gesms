@@ -63,19 +63,26 @@ async function translateWith(fn, provider, text, from, to, signal) {
   return parts.join('');
 }
 
+// Which service produced the last result ('google', 'mymemory' or 'cache'), for anonymous stats.
+export let lastProvider = null;
+
 export async function translateText(text, from, to, signal) {
   const key = `${from}|${to}|${text}`;
-  if (cache.has(key)) return cache.get(key);
+  if (cache.has(key)) { lastProvider = 'cache'; return cache.get(key); }
   let result;
   if (Date.now() >= googleDownUntil) {
     try {
       result = await translateWith(google, 'google', text, from, to, signal);
+      lastProvider = 'google';
     } catch (err) {
       if (signal?.aborted) throw err;
       googleDownUntil = Date.now() + GOOGLE_COOLDOWN;
     }
   }
-  result ??= await translateWith(mymemory, 'mymemory', text, from, to, signal);
+  if (result === undefined) {
+    result = await translateWith(mymemory, 'mymemory', text, from, to, signal);
+    lastProvider = 'mymemory';
+  }
   cache.set(key, result);
   return result;
 }
@@ -124,6 +131,7 @@ function suspicious(tokens, choice, output) {
 export async function translateTokens(tokens, to, signal, onUpdate) {
   const choice = [];
   let best = null;
+  let retries = 0;
   for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
     const georgian = render(tokens, choice);
     const translation = await translateText(georgian, 'ka', to, signal);
@@ -135,6 +143,7 @@ export async function translateTokens(tokens, to, signal, onUpdate) {
     const retry = bad.filter((i) => (choice[i] ?? 0) + 1 < words(tokens)[i].options.length);
     if (!retry.length) break;
     for (const i of retry) choice[i] = (choice[i] ?? 0) + 1;
+    retries++;
   }
-  return best;
+  return { ...best, retries };
 }
