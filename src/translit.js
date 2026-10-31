@@ -70,6 +70,9 @@ function units(word) {
     let hit = null;
     for (let len = 3; len >= 1 && !hit; len--) {
       const key = word.slice(i, i + len).toLowerCase();
+      // a digraph whose second letter starts another digraph yields to it:
+      // "wutshi" is t + sh (წუთში), not ts + h
+      if (len === 2 && word.length >= i + 3 && UNITS[word.slice(i + 1, i + 3).toLowerCase()]) continue;
       if (UNITS[key]) hit = [len, UNITS[key]];
     }
     if (hit) { out.push(hit[1]); i += hit[0]; }
