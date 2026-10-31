@@ -187,7 +187,6 @@ function applyLang(next) {
   document.querySelector('[data-html="about"]').innerHTML = aboutHtml(t);
   target.lang = lang;
   markCurrentLang();
-  store.set('lang', lang);
 }
 
 function markCurrentLang() {
@@ -200,6 +199,8 @@ function switchLang(next) {
   track('lang-switch', { from: lang, to: next });
   history.replaceState(null, '', new URL(pathFor(next), ROOT));
   applyLang(next);
+  // only an explicit choice is remembered; the root page redirects to it next time
+  store.set('langChoice', next);
   // re-translate from the source text: Latin or Georgian
   if (source === 'target') { source = 'ka'; store.set('source', 'ka'); }
   setField('target', '');
@@ -308,8 +309,6 @@ offer.addEventListener('click', (e) => { if (e.target === offer) offer.close(); 
 
 // --- Startup ---
 
-// remembered for the root page, which redirects to the last used language
-store.set('lang', lang);
 
 latin.value = store.get('latin', '');
 ka.value = store.get('ka', '');

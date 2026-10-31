@@ -89,8 +89,7 @@ for (const lang of LANGS) {
   console.log(`✓ ${pathFor(lang)}index.html`);
 }
 
-// Root: the browser's (system) language if we have it, else the default.
-// Only the installed app, which always starts at the root, reopens the last used language.
+// Root: the language last picked in the switcher, else the browser's (system) one, else the default.
 // Search engines get the default page as canonical and the language versions as alternates.
 const fallback = SITE + pathFor(DEFAULT_LANG);
 await writeFile(join(DIST, 'index.html'), `<!doctype html>
@@ -108,9 +107,7 @@ ${alternates}
     (() => {
       const langs = ${JSON.stringify(LANGS)};
       let lang = null;
-      if (matchMedia('(display-mode: standalone)').matches || navigator.standalone) {
-        try { lang = localStorage.getItem('lang'); } catch {}
-      }
+      try { lang = localStorage.getItem('langChoice'); } catch {}
       if (!langs.includes(lang)) {
         lang = (navigator.languages || [navigator.language || ''])
           .map((l) => String(l).slice(0, 2).toLowerCase()).find((l) => langs.includes(l)) || ${JSON.stringify(DEFAULT_LANG)};
