@@ -30,7 +30,7 @@ src/
   dict.bin              17k most frequent Georgian word forms, ~46 KB
   icons/                kitten, app icons, social preview
 scripts/
-  build.mjs             src/ → dist/ (pages for /en/, /ru/, /tr/, /es/, /fr/, a root redirect, sitemap, robots)
+  build.mjs             src/ → dist/ (pages for /en/, /ru/, /tr/, /es/, /fr/, a root redirect by browser language, sitemap, robots)
   build-dict.mjs        rebuilds src/dict.bin from the source corpora
   serve.mjs             local static server for dist/
 ```

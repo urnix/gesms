@@ -1,7 +1,7 @@
 // Service worker: caches the app shell so it opens offline
 // (transliteration works without a network; translation needs one).
 
-const CACHE = 'gesms-v10';
+const CACHE = 'gesms-v11';
 const SHELL = [
   './',
   './en/',
