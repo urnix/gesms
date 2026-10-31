@@ -1,8 +1,9 @@
 // Transliteration of Georgian typed in Latin letters into Mkhedruli.
 //
 // The base scheme is the "chat" one: the standard Georgian keyboard layout
-// (T=ტ, S=შ, W=ჭ, R=ღ, J=ჟ, Z=ძ, C=ჩ inside a word) plus digraphs sh, ch, kh, gh, ts, dz, zh
-// and an apostrophe for ejectives (t', k', p', q', ts', ch').
+// (T=ტ, S=შ, W=ჭ, R=ღ, J=ჟ, Z=ძ, C=ჩ inside a word) plus digraphs sh, ch, kh, gh, ts, dz, zh,
+// an apostrophe for ejectives (t', k', p', q', ts', ch') and the digit 4 for ჩ ("4ai" = ჩაი),
+// borrowed from the Russian ч it looks like.
 //
 // Latin is ambiguous: t is თ or ტ, k is კ or ქ, p is პ or ფ, and so on.
 // For every word we enumerate variants and pick one found in the frequency
@@ -12,7 +13,7 @@
 // The first option is the base scheme, the rest are alternatives.
 const UNITS = {
   "ch'": ['ჭ'], "ts'": ['წ'], tch: ['ჭ'], dzh: ['ჯ'],
-  "t'": ['ტ'], "k'": ['კ'], "p'": ['პ'], "q'": ['ყ'], "c'": ['წ'],
+  "t'": ['ტ'], "k'": ['კ'], "p'": ['პ'], "q'": ['ყ'], "c'": ['წ'], "4'": ['ჭ'], 4: ['ჩ', 'ჭ'],
   sh: ['შ'], ch: ['ჩ', 'ჭ'], zh: ['ჟ'], gh: ['ღ'], kh: ['ხ', 'ქ'], ts: ['ც', 'წ'],
   dz: ['ძ'], th: ['თ'], ph: ['ფ'], dj: ['ჯ'],
   a: ['ა'], b: ['ბ'], c: ['ც', 'წ', 'ჩ'], d: ['დ'], e: ['ე'], f: ['ფ'], g: ['გ', 'ღ'],
@@ -105,7 +106,10 @@ function rankWord(word) {
 }
 
 const APOSTROPHES = /[’ʼ`´‘]/g;
-const TOKEN = /([A-Za-z]+(?:'[A-Za-z]*)*)|([^A-Za-z]+)/g;
+// A 4 next to another digit is part of a number ("14", "2024"), elsewhere it may be a letter.
+const LETTER4 = String.raw`(?<![0-9])4(?![0-9])`;
+const TOKEN = new RegExp(
+  String.raw`((?:[A-Za-z]|${LETTER4})+(?:'[A-Za-z]*)*)|((?:[^A-Za-z4]|(?<=[0-9])4|4(?=[0-9]))+)`, 'g');
 
 // Parses text: Latin words → { latin, options, known }, everything else stays a string.
 export function analyze(text) {
@@ -113,9 +117,19 @@ export function analyze(text) {
   const tokens = [];
   for (const [, word, other] of text.matchAll(TOKEN)) {
     if (other) { tokens.push(other); continue; }
+    // a lone "4" is a number
+    if (!/[A-Za-z]/.test(word)) { tokens.push(word); continue; }
     // a capital followed by lowercase at word start is just a capital ("Tbilisi")
-    const w = /^[A-Z][a-z']/.test(word) ? word[0].toLowerCase() + word.slice(1) : word;
-    tokens.push({ latin: word, ...rankWord(w) });
+    let w = /^[A-Z][a-z']/.test(word) ? word[0].toLowerCase() + word.slice(1) : word;
+    let latin = word;
+    // a leading 4 before a consonant is usually a number with a suffix ("4ze" = at four),
+    // unless the dictionary knows the word with ჩ ("4vens" = ჩვენს)
+    if (w[0] === '4' && !/^4['aeiou]/i.test(w) && !rankWord(w).known) {
+      tokens.push('4');
+      w = w.slice(1);
+      latin = latin.slice(1);
+    }
+    tokens.push({ latin, ...rankWord(w) });
   }
   return tokens;
 }
