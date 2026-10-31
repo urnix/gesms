@@ -1,9 +1,10 @@
 // UI texts in every target language (the target language is also the UI language).
 // Used both in the browser (app.js) and when building static pages (scripts/build-pages.mjs).
 
-export const LANGS = ['ru', 'en', 'tr', 'es', 'fr'];
-export const DEFAULT_LANG = 'ru';
-export const pathFor = (lang) => (lang === DEFAULT_LANG ? '' : `${lang}/`);
+export const LANGS = ['en', 'ru', 'tr', 'es', 'fr'];
+export const DEFAULT_LANG = 'en';
+// Every language has its own folder; the site root only redirects to one of them.
+export const pathFor = (lang) => `${lang}/`;
 
 export const FLAGS = {
   ru: '<svg viewBox="0 0 9 6" aria-hidden="true"><rect width="9" height="6" fill="#fff"/><rect y="2" width="9" height="2" fill="#0039A6"/><rect y="4" width="9" height="2" fill="#D52B1E"/></svg>',

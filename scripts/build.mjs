@@ -1,6 +1,7 @@
 // Builds the site into dist/: copies src/ (except the template) and renders
 // src/template.html into one static page per target language
-// (/, /en/, /tr/, /es/, /fr/), so search engines see ready text in each language.
+// (/en/, /ru/, /tr/, /es/, /fr/), so search engines see ready text in each language.
+// The root page only redirects to the last used or the browser's language (English by default).
 // Also writes sitemap.xml and robots.txt.
 //
 //   node scripts/build.mjs
@@ -17,7 +18,7 @@ const SITE = 'https://gesms.artme.dev/';
 const UMAMI_WEBSITE_ID = 'f5e56872-87a1-4dca-92ba-2fc6b2a4d6a5';
 const LOCALES = { ru: 'ru_RU', en: 'en_US', tr: 'tr_TR', es: 'es_ES', fr: 'fr_FR' };
 
-const { LANGS, T, FLAGS, KA_ABOUT, pathFor, termsHtml, installHtml, aboutHtml } =
+const { LANGS, DEFAULT_LANG, T, FLAGS, KA_ABOUT, pathFor, termsHtml, installHtml, aboutHtml } =
   await import(pathToFileURL(join(SRC, 'i18n.js')).href);
 
 await rm(DIST, { recursive: true, force: true });
@@ -49,7 +50,7 @@ const alternates = [
 
 for (const lang of LANGS) {
   const t = T[lang];
-  const base = pathFor(lang) ? '../' : './';
+  const base = '../';
   const url = SITE + pathFor(lang);
   const langMenu = LANGS.map((l) =>
     `              <a href="${base}${pathFor(l)}" data-lang="${l}" lang="${l}"${l === lang ? ' aria-current="true"' : ''}>`
@@ -85,8 +86,43 @@ for (const lang of LANGS) {
   const dir = join(DIST, pathFor(lang));
   await mkdir(dir, { recursive: true });
   await writeFile(join(dir, 'index.html'), html);
-  console.log(`✓ ${pathFor(lang) || '/'}index.html`);
+  console.log(`✓ ${pathFor(lang)}index.html`);
 }
+
+// Root: pick the last used language, else the browser's one, else the default.
+// Search engines get the default page as canonical and the language versions as alternates.
+const fallback = SITE + pathFor(DEFAULT_LANG);
+await writeFile(join(DIST, 'index.html'), `<!doctype html>
+<html lang="${DEFAULT_LANG}">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>${esc(T[DEFAULT_LANG].title)}</title>
+  <link rel="canonical" href="${fallback}">
+${alternates}
+  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="icon" href="./icons/icon.svg" type="image/svg+xml">
+  <meta name="theme-color" content="#E4002B">
+  <script>
+    (() => {
+      const langs = ${JSON.stringify(LANGS)};
+      let lang = null;
+      try { lang = localStorage.getItem('lang'); } catch {}
+      if (!langs.includes(lang)) {
+        lang = (navigator.languages || [navigator.language || ''])
+          .map((l) => String(l).slice(0, 2).toLowerCase()).find((l) => langs.includes(l)) || ${JSON.stringify(DEFAULT_LANG)};
+      }
+      location.replace('./' + lang + '/' + location.search + location.hash);
+    })();
+  </script>
+  <noscript><meta http-equiv="refresh" content="0; url=./${pathFor(DEFAULT_LANG)}"></noscript>
+</head>
+<body>
+  <p><a href="./${pathFor(DEFAULT_LANG)}">GeSMS</a></p>
+</body>
+</html>
+`);
+console.log('✓ /index.html (language redirect)');
 
 const today = new Date().toISOString().slice(0, 10);
 await writeFile(join(DIST, 'sitemap.xml'),

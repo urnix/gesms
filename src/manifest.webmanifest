@@ -1,8 +1,8 @@
 {
-  "name": "GeSMS — грузинская латиница → перевод",
+  "name": "GeSMS — Georgian in Latin letters → translation",
   "short_name": "GeSMS",
-  "description": "Перевод грузинских СМС, написанных латиницей: транслитерация в грузинские буквы и перевод на русский, английский, турецкий, испанский, французский",
-  "lang": "ru",
+  "description": "Translate Georgian SMS typed in Latin letters: transliteration into Georgian script and translation into English, Russian, Turkish, Spanish and French",
+  "lang": "en",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",

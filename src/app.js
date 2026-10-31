@@ -1,6 +1,6 @@
 import { analyze, render, loadDictionary, toLatin } from './translit.js';
 import { translateText, translateTokens, lastProvider } from './translate.js';
-import { LANGS, DEFAULT_LANG, T, FLAGS, pathFor, termsHtml, installHtml, aboutHtml } from './i18n.js';
+import { T, FLAGS, pathFor, termsHtml, installHtml, aboutHtml } from './i18n.js';
 
 const $ = (id) => document.getElementById(id);
 const latin = $('latin');
@@ -308,14 +308,8 @@ offer.addEventListener('click', (e) => { if (e.target === offer) offer.close(); 
 
 // --- Startup ---
 
-const saved = store.get('lang', null);
-const onRoot = new URL(location.href).pathname === ROOT.pathname;
-if (onRoot && saved && saved !== DEFAULT_LANG && LANGS.includes(saved)) {
-  history.replaceState(null, '', new URL(pathFor(saved), ROOT));
-  applyLang(saved);
-} else {
-  store.set('lang', lang);
-}
+// remembered for the root page, which redirects to the last used language
+store.set('lang', lang);
 
 latin.value = store.get('latin', '');
 ka.value = store.get('ka', '');
